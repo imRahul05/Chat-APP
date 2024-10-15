@@ -93,37 +93,55 @@ const Chat: React.FC = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !selectedGroup) return;
-
-    const { error } = await supabase
+  
+    const { data, error } = await supabase
       .from('messages')
-      .insert({ content: newMessage, user_id: user.id, group_id: selectedGroup });
-
-    if (error) console.error('Error sending message:', error);
-    else {
+      .insert({ content: newMessage, user_id: user.id, group_id: selectedGroup })
+      .select();
+  
+    if (error) {
+      console.error('Error sending message:', error);
+    } else {
       setNewMessage('');
       setIsTyping(false);
-    }
-  };
-
-  const handleCreateGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newGroupName.trim() || !user) return;
-
-    const { data, error } = await supabase
-      .from('groups')
-      .insert({ name: newGroupName, created_by: user.id })
-      .select();
-
-    if (error) console.error('Error creating group:', error);
-    else {
-      setNewGroupName('');
-      fetchGroups();
       if (data && data[0]) {
-        setSelectedGroup(data[0].id);
+        setMessages(prevMessages => [...prevMessages, data[0]]);
+        scrollToBottom();
       }
     }
-  };
+  };const handleCreateGroup = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Debugging logs
+  console.log('Creating group with name:', newGroupName);
+  console.log('Current user:', user);
 
+  if (!newGroupName.trim()) {
+    console.error('Group name is empty');
+    return;
+  }
+
+  if (!user) {
+    console.error('User is not authenticated');
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('groups')
+    .insert({ name: newGroupName, created_by: user.id })
+    .select();
+
+  if (error) {
+    console.error('Error creating group:', error);
+  } else {
+    console.log('Group created successfully:', data);
+    setNewGroupName('');
+    fetchGroups();
+    if (data && data[0]) {
+      setSelectedGroup(data[0].id);
+    }
+  }
+};
   return (
     <div className={`flex flex-col h-screen ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
       <header className="bg-indigo-600 p-4 flex justify-between items-center">
